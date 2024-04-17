@@ -1,5 +1,5 @@
 def __module_version__():
-	return 0, 0, 7 
+	return 0, 0, 9 
 
 
 def __module_name__():
@@ -15,7 +15,7 @@ def __author_email__():
 
 
 def __package_description__():
-	return 'Experimental openAI gym environments for cellworld experimental setup'
+	return 'Experimental openAI gym environments for cellworld experimental setup' 
 
 
 def __install_requires__():
@@ -23,11 +23,11 @@ def __install_requires__():
 
 
 def __url__():
-	return 'https://github.com/germanespinosa/cellworld_gym'
+	return 'https://github.com/germanespinosa/cellworld_gym' 
 
 
 def __license__():
-	return 'MIT'
+	return 'MIT' 
 
 
 def __license_file__():
@@ -42,19 +42,11 @@ def __package_name__():
 	return 'cellworld_gym' 
 
 
-def __setup_py__():
-	return '../setup/setup.py' 
-
-
-def __setup_cfg__():
-	return '../setup/setup.cfg' 
-
-
 def __root_folder__():
 	return 'cellworld_gym' 
 
 
 def __description__():
-	return 'Experimental openAI gym environments for cellworld experimental setup'
+	return 'Experimental openAI gym environments for cellworld experimental setup' 
 
 

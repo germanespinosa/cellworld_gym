@@ -55,6 +55,7 @@ class BotEvade(Env):
         self.captures = 0
         self.prey_trajectory_length = 0
         self.predator_trajectory_length = 0
+        self.episode_reward = 0
 
     def get_observation(self):
         self.observation[MouseObservation.Field.prey_x] = self.prey.state.location[0]
@@ -94,11 +95,14 @@ class BotEvade(Env):
         truncated = (self.step_count >= self.max_step)
         obs = self.get_observation()
         reward = self.reward_function(obs)
+        self.episode_reward += reward
+
         if self.prey.puffed:
             self.captures += 1
             self.prey.puffed = False
         if self.prey.finished or truncated:
             info = {"captures": self.captures,
+                    "reward": self.episode_reward,
                     "is_success": 1 if self.prey.finished and self.captures == 0 else 0,
                     "survived": 1 if self.prey.finished and self.captures == 0 else 0,
                     "agents": {}}
@@ -112,6 +116,7 @@ class BotEvade(Env):
     def reset(self, seed=None):
         self.captures = 0
         self.step_count = 0
+        self.episode_reward = 0
         self.model.reset()
         obs = self.get_observation()
         return obs, {}
