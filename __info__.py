@@ -15,7 +15,7 @@ def __author_email__():
 
 
 def __package_description__():
-	return '' 
+	return 'Experimental openAI gym environments for cellworld experimental setup'
 
 
 def __install_requires__():
@@ -23,11 +23,11 @@ def __install_requires__():
 
 
 def __url__():
-	return '' 
+	return 'https://github.com/germanespinosa/cellworld_gym'
 
 
 def __license__():
-	return '' 
+	return 'MIT'
 
 
 def __license_file__():
@@ -55,6 +55,6 @@ def __root_folder__():
 
 
 def __description__():
-	return '' 
+	return 'Experimental openAI gym environments for cellworld experimental setup'
 
 
