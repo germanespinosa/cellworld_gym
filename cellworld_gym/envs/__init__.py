@@ -1,5 +1,5 @@
 from gymnasium.envs.registration import register
-from .bot_evade import BotEvade
+from .bot_evade import BotEvade, BotEvadeObservation, BotEvadeReward
 
 register(
     id='CellworldBotEvade-v0',
