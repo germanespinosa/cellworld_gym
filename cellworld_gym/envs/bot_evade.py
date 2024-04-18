@@ -1,8 +1,34 @@
-from cellworld_game import Model, Robot, Mouse, MouseObservation, AgentState, View, distance, CellWorldLoader
+import typing
+from cellworld_game import Model, Robot, Mouse, AgentState, View, distance, CellWorldLoader
 from gymnasium import Env
 from gymnasium import spaces
 import numpy as np
 import math
+
+from enum import Enum
+
+
+class BotEvadeObservation(typing.List[float]):
+    class Field(Enum):
+        prey_x = 0
+        prey_y = 1
+        prey_direction = 2
+        predator_x = 3
+        predator_y = 4
+        predator_direction = 5
+        goal_distance = 6
+        predator_distance = 7
+        puffed = 8
+        puff_cooled_down = 9
+        finished = 10
+
+    def __init__(self):
+        super().__init__()
+        for i in BotEvadeObservation.Field:
+            self.append(0.0)
+
+    def __setitem__(self, field: Field, value):
+        list.__setitem__(self, field.value, value)
 
 
 class BotEvade(Env):
@@ -19,7 +45,7 @@ class BotEvade(Env):
         self.reward_function = reward_function
         self.step_wait = step_wait
         self.loader = CellWorldLoader(world_name=world_name)
-        self.observation = MouseObservation()
+        self.observation = BotEvadeObservation()
         self.observation_space = spaces.Box(-np.inf, np.inf, (len(self.observation),), dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.loader.tlppo_action_list)
                                             if use_lppos
@@ -58,28 +84,28 @@ class BotEvade(Env):
         self.episode_reward = 0
 
     def get_observation(self):
-        self.observation[MouseObservation.Field.prey_x] = self.prey.state.location[0]
-        self.observation[MouseObservation.Field.prey_y] = self.prey.state.location[1]
-        self.observation[MouseObservation.Field.prey_direction] = math.radians(self.prey.state.direction)
+        self.observation[BotEvadeObservation.Field.prey_x] = self.prey.state.location[0]
+        self.observation[BotEvadeObservation.Field.prey_y] = self.prey.state.location[1]
+        self.observation[BotEvadeObservation.Field.prey_direction] = math.radians(self.prey.state.direction)
 
         if self.model.visibility.line_of_sight(self.prey.state.location, self.predator.state.location):
-            self.observation[MouseObservation.Field.predator_x] = self.predator.state.location[0]
-            self.observation[MouseObservation.Field.predator_y] = self.predator.state.location[1]
-            self.observation[MouseObservation.Field.predator_direction] = math.radians(
+            self.observation[BotEvadeObservation.Field.predator_x] = self.predator.state.location[0]
+            self.observation[BotEvadeObservation.Field.predator_y] = self.predator.state.location[1]
+            self.observation[BotEvadeObservation.Field.predator_direction] = math.radians(
                 self.predator.state.direction)
             predator_distance = distance(self.prey.state.location, self.predator.state.location)
         else:
-            self.observation[MouseObservation.Field.predator_x] = 0
-            self.observation[MouseObservation.Field.predator_y] = 0
-            self.observation[MouseObservation.Field.predator_direction] = 0
+            self.observation[BotEvadeObservation.Field.predator_x] = 0
+            self.observation[BotEvadeObservation.Field.predator_y] = 0
+            self.observation[BotEvadeObservation.Field.predator_direction] = 0
             predator_distance = 1
 
         goal_distance = distance(self.prey.goal_location, self.prey.state.location)
-        self.observation[MouseObservation.Field.goal_distance] = goal_distance
-        self.observation[MouseObservation.Field.predator_distance] = predator_distance
-        self.observation[MouseObservation.Field.puffed] = self.prey.puffed
-        self.observation[MouseObservation.Field.puff_cooled_down] = self.prey.puff_cool_down
-        self.observation[MouseObservation.Field.finished] = self.prey.finished
+        self.observation[BotEvadeObservation.Field.goal_distance] = goal_distance
+        self.observation[BotEvadeObservation.Field.predator_distance] = predator_distance
+        self.observation[BotEvadeObservation.Field.puffed] = self.prey.puffed
+        self.observation[BotEvadeObservation.Field.puff_cooled_down] = self.prey.puff_cool_down
+        self.observation[BotEvadeObservation.Field.finished] = self.prey.finished
         return self.observation
 
     def set_action(self, action: int):
