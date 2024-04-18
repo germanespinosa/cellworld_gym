@@ -153,15 +153,17 @@ class BotEvade(Env):
                 info["agents"][agent_name] = agent.get_stats()
         else:
             info = {}
-        return obs, reward, self.prey.finished, truncated, info
+        return np.array(obs, dtype=np.float32), reward, self.prey.finished, truncated, info
 
-    def reset(self, seed=None):
+    def reset(self,
+              options={},
+              seed=None):
         self.captures = 0
         self.step_count = 0
         self.episode_reward = 0
         self.model.reset()
         obs = self.get_observation()
-        return obs, {}
+        return np.array(obs, dtype=np.float32), {}
 
     def render(self):
         if self.view is None:
