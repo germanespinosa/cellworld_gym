@@ -43,7 +43,7 @@ class BotEvadeReward(object):
             if isinstance(multiplier, list):
                 offset = multiplier[1]
                 multiplier = multiplier[0]
-            reward += offset + multiplier * observation[BotEvadeReward.Field[field].value]
+            reward += offset + multiplier * observation[BotEvadeObservation.Field[field].value]
         return reward
 
 
