@@ -1,3 +1,3 @@
 #add imports here
 
-from .bot_evade import BotEvade
+from cellworld_gym.envs.bot_evade import BotEvade
