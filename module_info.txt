@@ -1,13 +1,13 @@
 {
     "major": 0,
     "minor": 0,
-    "build": 25,
+    "build": 34,
     "source_folder": "cellworld_gym",
     "module_name": "cellworld_gym",
     "package_name": "cellworld_gym",
     "author": "German Espinosa",
     "author_email": "germanespinosa@gmail.com",
-    "description": "Experimental openAI gym environments for cellworld experimental setup",
+    "description": "OpenAI gym environments for cellworld experimental setup",
     "install_requires": [
         "cellworld_game",
         "gym"
