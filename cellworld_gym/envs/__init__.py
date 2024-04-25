@@ -1,6 +1,6 @@
 from gymnasium.envs.registration import register
-from .bot_evade import BotEvadeEnv, BotEvadeObservation, BotEvadeReward
-from .oasis import Oasis, OasisObservation, OasisReward, OasisGoalSequence, OasisGoalRandomSequence
+from .bot_evade import BotEvadeEnv, BotEvadeObservation
+from .oasis import Oasis, OasisObservation, OasisGoalSequence, OasisGoalRandomSequence
 
 register(
     id='CellworldBotEvade-v0',

@@ -3,59 +3,24 @@ import cellworld_game as cwgame
 import numpy as np
 import math
 
+from ..core import Observation
 from cellworld_game import AgentState
 from gymnasium import Env
 from gymnasium import spaces
-from enum import Enum
 
 
-class BotEvadeObservation(typing.List[float]):
-    class Field(Enum):
-        prey_x = 0
-        prey_y = 1
-        prey_direction = 2
-        predator_x = 3
-        predator_y = 4
-        predator_direction = 5
-        prey_goal_distance = 6
-        predator_prey_distance = 7
-        puffed = 8
-        puff_cooled_down = 9
-        finished = 10
-
-    def __init__(self):
-        super().__init__()
-        for field in self.__class__.Field:
-            self.append(0.0)
-            self._create_property(field)
-
-    def _create_property(self, field):
-        def getter(self):
-            return self[field.value]
-
-        def setter(self, value):
-            self[field] = value
-
-        setattr(self.__class__, field.name, property(getter, setter))
-
-    def __setitem__(self, field: Field, value):
-        list.__setitem__(self, field.value, value)
-
-
-class BotEvadeReward(object):
-    def __init__(self,
-                 reward_structure: dict):
-        self.reward_structure = reward_structure
-
-    def __call__(self, observation: typing.List[float]) -> float:
-        reward = 0.0
-        for field, multiplier in self.reward_structure.items():
-            offset = 0
-            if isinstance(multiplier, list):
-                offset = multiplier[1]
-                multiplier = multiplier[0]
-            reward += offset + multiplier * observation[BotEvadeObservation.Field[field].value]
-        return reward
+class BotEvadeObservation(Observation):
+    fields = ["prey_x",
+              "prey_y",
+              "prey_direction",
+              "predator_x",
+              "predator_y",
+              "predator_direction",
+              "prey_goal_distance",
+              "predator_prey_distance",
+              "puffed",
+              "puff_cooled_down",
+              "finished"]
 
 
 class BotEvadeEnv(Env):
@@ -133,10 +98,11 @@ class BotEvadeEnv(Env):
         if self.model.puffed:
             self.model.puffed = False
         if not self.model.running or truncated:
+            survived = 1 if not self.model.running and self.model.puff_count == 0 else 0
             info = {"captures": self.model.puff_count,
                     "reward": self.episode_reward,
-                    "is_success": 1 if not self.model.running and self.model.puff_count == 0 else 0,
-                    "survived": 1 if not self.model.running and self.model.puff_count == 0 else 0,
+                    "is_success": survived,
+                    "survived": survived,
                     "agents": {}}
             for agent_name, agent in self.model.agents.items():
                 info["agents"][agent_name] = {}
@@ -144,10 +110,11 @@ class BotEvadeEnv(Env):
         else:
             info = {}
         self.step_count += 1
-        return np.array(obs, dtype=np.float32), reward, not self.model.running, truncated, info
+        return obs, reward, not self.model.running, truncated, info
 
     def replay_step(self, agents_state: typing.Dict[str, AgentState]):
-        self.model.set_agents_state(agents_state=agents_state, delta_t=self.time_step)
+        self.model.set_agents_state(agents_state=agents_state,
+                                    delta_t=self.time_step)
         return self.__step__()
 
     def step(self, action: int):
@@ -160,8 +127,7 @@ class BotEvadeEnv(Env):
     def __reset__(self):
         self.episode_reward = 0
         self.step_count = 0
-        obs = self.__update_observation__()
-        return np.array(obs, dtype=np.float32), {}
+        return self.__update_observation__(), {}
 
     def reset(self,
               options={},
