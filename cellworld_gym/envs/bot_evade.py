@@ -124,9 +124,8 @@ class BotEvadeEnv(Env):
     def set_action(self, action: int):
         self.model.prey.set_destination(self.action_list[action])
 
-
     def __step__(self):
-        truncated = (self.model.step_count >= self.max_step)
+        truncated = (self.step_count >= self.max_step)
         obs = self.__update_observation__()
         reward = self.reward_function(obs)
         self.episode_reward += reward
