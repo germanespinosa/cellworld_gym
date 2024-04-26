@@ -12,9 +12,9 @@ from gymnasium import spaces
 
 
 class DualEvadeObservation(Observation):
-    fields = ["prey_x",
-              "prey_y",
-              "prey_direction",
+    fields = ["self_x",
+              "self_y",
+              "self_direction",
               "other_x",
               "other_y",
               "other_direction",
@@ -75,9 +75,9 @@ class DualEvadeEnv(Env):
         self.other_policy = other_policy
 
     def __update_observation__(self, observation: DualEvadeObservation, prey, prey_data, other, other_data):
-        observation.prey_x = prey.state.location[0]
-        observation.prey_y = prey.state.location[1]
-        observation.prey_direction = math.radians(prey.state.direction)
+        observation.self_x = prey.state.location[0]
+        observation.self_y = prey.state.location[1]
+        observation.self_direction = math.radians(prey.state.direction)
 
         if self.model.mouse_visible:
             observation.other_x = other.state.location[0]
