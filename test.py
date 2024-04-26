@@ -4,7 +4,8 @@ import gymnasium as gym
 if __name__ == "__main__":
     def reward(obs):
         return 1
-    env = gym.make("CellworldBotEvade",
+    env = gym.make("CellworldOasis",
+                   goal_locations=[(.2, .3), (.5, .6), (.7, .8)],
                    world_name="21_05",
                    use_lppos=False,
                    use_predator=True,

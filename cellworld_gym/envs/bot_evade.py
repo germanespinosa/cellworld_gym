@@ -32,11 +32,7 @@ class BotEvadeEnv(Env):
                  reward_function: typing.Callable[[BotEvadeObservation], float] = lambda x: 0,
                  time_step: float = .25,
                  render: bool = False,
-                 real_time: bool = False,
-                 pre_reset: typing.Optional[typing.Callable[["BotEvadeEnv"], None]] = None,
-                 post_reset: typing.Optional[typing.Callable[["BotEvadeEnv"], None]] = None,
-                 pre_step: typing.Optional[typing.Callable[["BotEvadeEnv"], None]] = None,
-                 post_step: typing.Optional[typing.Callable[["BotEvadeEnv"], None]] = None):
+                 real_time: bool = False):
 
         self.max_step = max_step
         self.reward_function = reward_function
@@ -58,11 +54,6 @@ class BotEvadeEnv(Env):
         self.prey_trajectory_length = 0
         self.predator_trajectory_length = 0
         self.episode_reward = 0
-
-        self.pre_reset = pre_reset
-        self.post_reset = post_reset
-        self.pre_step = pre_step
-        self.post_step = post_step
         self.step_count = 0
 
     def __update_observation__(self):
@@ -70,7 +61,7 @@ class BotEvadeEnv(Env):
         self.observation.prey_y = self.model.prey.state.location[1]
         self.observation.prey_direction = math.radians(self.model.prey.state.direction)
 
-        if self.model.use_predator and self.model.visibility.line_of_sight(self.model.prey.state.location, self.model.predator.state.location):
+        if self.model.use_predator and self.model.predator_visible:
             self.observation.predator_x = self.model.predator.state.location[0]
             self.observation.predator_y = self.model.predator.state.location[1]
             self.observation.predator_direction = math.radians(self.model.predator.state.direction)
