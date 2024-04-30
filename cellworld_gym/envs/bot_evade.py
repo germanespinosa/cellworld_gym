@@ -130,3 +130,7 @@ class BotEvadeEnv(Env):
         self.model.reset()
         self.model.set_agents_state(agents_state=agents_state)
         return self.__reset__()
+
+    def close(self):
+        self.model.close()
+        Env.close(self=self)

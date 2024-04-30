@@ -27,29 +27,32 @@ class DualEvadeObservation(Observation):
               "puff_cooled_down",
               "finished"]
 
-class DualEvadePOV(Enum):
+
+class DualEvadePov(Enum):
     mouse_1 = auto()
     mouse_2 = auto()
+
 
 class DualEvadeEnv(Env):
     def __init__(self,
                  world_name: str,
-                 POV: DualEvadePOV,
+                 pov: DualEvadePov,
                  use_lppos: bool,
                  use_predator: bool,
-                 other_policy: typing.Callable[[DualEvadeObservation], int] = None,
                  max_step: int = 300,
                  reward_function: typing.Callable[[DualEvadeObservation], float] = lambda x: 0,
                  time_step: float = .25,
                  render: bool = False,
-                 real_time: bool = False):
-        self.POV = POV
+                 real_time: bool = False,
+                 end_on_pov_goal: bool = True):
+        self.pov = pov
         self.max_step = max_step
         self.reward_function = reward_function
         self.time_step = time_step
         self.loader = cwgame.CellWorldLoader(world_name=world_name)
         self.observation = DualEvadeObservation()
         self.observation_space = spaces.Box(-np.inf, np.inf, (len(self.observation),), dtype=np.float32)
+        self.end_on_pov_goal = end_on_pov_goal
         if use_lppos:
             self.action_list = self.loader.tlppo_action_list
         else:
@@ -66,15 +69,16 @@ class DualEvadeEnv(Env):
         self.episode_reward = 0
         self.step_count = 0
         self.other_observation = DualEvadeObservation()
-        self.prey = self.model.prey_1 if POV == DualEvadePOV.mouse_1 else self.model.prey_2
-        self.other = self.model.prey_2 if POV == DualEvadePOV.mouse_1 else self.model.prey_1
-        self.prey_data = self.model.prey_data_1 if POV == DualEvadePOV.mouse_1 else self.model.prey_data_2
-        self.other_data = self.model.prey_data_2 if POV == DualEvadePOV.mouse_1 else self.model.prey_data_1
-        if other_policy is None:
-            other_policy = lambda x: random.randint(0, len(self.action_list) - 1)
+        self.prey = self.model.prey_1 if pov == DualEvadePov.mouse_1 else self.model.prey_2
+        self.other = self.model.prey_2 if pov == DualEvadePov.mouse_1 else self.model.prey_1
+        self.prey_data = self.model.prey_data_1 if pov == DualEvadePov.mouse_1 else self.model.prey_data_2
+        self.other_data = self.model.prey_data_2 if pov == DualEvadePov.mouse_1 else self.model.prey_data_1
+        self.other_policy = lambda x: random.randint(0, len(self.action_list) - 1)
+
+    def set_other_policy(self, other_policy: typing.Callable[[DualEvadeObservation], int]):
         self.other_policy = other_policy
 
-    def __update_observation__(self, observation: DualEvadeObservation, prey, prey_data, other, other_data):
+    def __update_observation__(self, observation: DualEvadeObservation, prey, prey_data, other):
         observation.self_x = prey.state.location[0]
         observation.self_y = prey.state.location[1]
         observation.self_direction = math.radians(prey.state.direction)
@@ -114,13 +118,17 @@ class DualEvadeEnv(Env):
         obs = self.__update_observation__(observation=self.observation,
                                           prey=self.prey,
                                           prey_data=self.prey_data,
-                                          other=self.other,
-                                          other_data=self.other_data)
+                                          other=self.other)
         reward = self.reward_function(obs)
         self.episode_reward += reward
 
-        if self.model.puffed:
-            self.model.puffed = False
+        if self.prey_data.puffed:
+            self.prey_data.puffed = False
+
+        if self.prey_data.goal_achieved:
+            if self.end_on_pov_goal or self.other_data.goal_achieved:
+                self.model.stop()
+
         if not self.model.running or truncated:
             survived = 1 if not self.model.running and self.prey_data.puff_count == 0 else 0
             info = {"captures": self.prey_data.puff_count,
@@ -145,8 +153,7 @@ class DualEvadeEnv(Env):
         other_obs = self.__update_observation__(observation=self.other_observation,
                                                 prey=self.other,
                                                 prey_data=self.other_data,
-                                                other=self.prey,
-                                                other_data=self.prey_data)
+                                                other=self.prey)
         other_action = self.other_policy(other_obs)
         self.set_actions(action=action,
                          other_action=other_action)
@@ -161,8 +168,7 @@ class DualEvadeEnv(Env):
         return self.__update_observation__(observation=self.observation,
                                            prey=self.prey,
                                            prey_data=self.prey_data,
-                                           other=self.other,
-                                           other_data=self.other_data), {}
+                                           other=self.other), {}
 
     def reset(self,
               options={},
@@ -174,3 +180,7 @@ class DualEvadeEnv(Env):
         self.model.reset()
         self.model.set_agents_state(agents_state=agents_state)
         return self.__reset__()
+
+    def close(self):
+        self.model.close()
+        Env.close(self=self)
