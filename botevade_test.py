@@ -4,8 +4,7 @@ import gymnasium as gym
 if __name__ == "__main__":
     def reward(obs):
         return 1
-    env = gym.make("CellworldDualEvade-v0",
-                   pov=cellworld_gym.DualEvadePov.mouse_2,
+    env = gym.make("CellworldBotEvade-v0",
                    world_name="21_05",
                    use_lppos=False,
                    use_predator=True,
