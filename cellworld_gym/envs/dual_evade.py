@@ -4,7 +4,6 @@ import cellworld_game as cwgame
 import numpy as np
 import math
 
-from enum import Enum, auto
 from ..core import Observation
 from cellworld_game import AgentState
 from gymnasium import Env
