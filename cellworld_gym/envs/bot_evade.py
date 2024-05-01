@@ -1,4 +1,4 @@
-import metrica
+import pulsekit
 import typing
 import cellworld_game as cwgame
 import numpy as np
@@ -58,7 +58,7 @@ class BotEvadeEnv(Env):
         self.step_count = 0
 
     def __update_observation__(self):
-        with metrica.CodeBlock("botevadeenv.__update_observation__"):
+        with pulsekit.CodeBlock("botevadeenv.__update_observation__"):
             self.observation.prey_x = self.model.prey.state.location[0]
             self.observation.prey_y = self.model.prey.state.location[1]
             self.observation.prey_direction = math.radians(self.model.prey.state.direction)
@@ -83,7 +83,7 @@ class BotEvadeEnv(Env):
         self.model.prey.set_destination(self.action_list[action])
 
     def __step__(self):
-        with metrica.CodeBlock("botevadeenv.__step__"):
+        with pulsekit.CodeBlock("botevadeenv.__step__"):
             truncated = (self.step_count >= self.max_step)
             obs = self.__update_observation__()
             reward = self.reward_function(obs)
@@ -112,11 +112,11 @@ class BotEvadeEnv(Env):
         return self.__step__()
 
     def step(self, action: int):
-        with metrica.CodeBlock("botevadeenv.step"):
-            with metrica.CodeBlock("set_action"):
+        with pulsekit.CodeBlock("botevadeenv.step"):
+            with pulsekit.CodeBlock("set_action"):
                 self.set_action(action=action)
             model_t = self.model.time + self.time_step
-            with metrica.CodeBlock("model_steps"):
+            with pulsekit.CodeBlock("model_steps"):
                 while self.model.running and self.model.time < model_t:
                     self.model.step()
             return self.__step__()
