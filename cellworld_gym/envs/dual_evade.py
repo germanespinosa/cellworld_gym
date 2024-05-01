@@ -28,15 +28,9 @@ class DualEvadeObservation(Observation):
               "finished"]
 
 
-class DualEvadePov(Enum):
-    mouse_1 = auto()
-    mouse_2 = auto()
-
-
 class DualEvadeEnv(Env):
     def __init__(self,
                  world_name: str,
-                 pov: DualEvadePov,
                  use_lppos: bool,
                  use_predator: bool,
                  max_step: int = 300,
@@ -45,7 +39,6 @@ class DualEvadeEnv(Env):
                  render: bool = False,
                  real_time: bool = False,
                  end_on_pov_goal: bool = True):
-        self.pov = pov
         self.max_step = max_step
         self.reward_function = reward_function
         self.time_step = time_step
@@ -69,10 +62,10 @@ class DualEvadeEnv(Env):
         self.episode_reward = 0
         self.step_count = 0
         self.other_observation = DualEvadeObservation()
-        self.prey = self.model.prey_1 if pov == DualEvadePov.mouse_1 else self.model.prey_2
-        self.other = self.model.prey_2 if pov == DualEvadePov.mouse_1 else self.model.prey_1
-        self.prey_data = self.model.prey_data_1 if pov == DualEvadePov.mouse_1 else self.model.prey_data_2
-        self.other_data = self.model.prey_data_2 if pov == DualEvadePov.mouse_1 else self.model.prey_data_1
+        self.prey = self.model.prey_1
+        self.other = self.model.prey_2
+        self.prey_data = self.model.prey_data_1
+        self.other_data = self.model.prey_data_2
         self.other_policy = lambda x: random.randint(0, len(self.action_list) - 1)
 
     def set_other_policy(self, other_policy: typing.Callable[[DualEvadeObservation], int]):
