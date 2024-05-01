@@ -1,7 +1,7 @@
 from gymnasium.envs.registration import register
 from .bot_evade import BotEvadeEnv, BotEvadeObservation
 from .oasis import OasisEnv, OasisObservation
-from .dual_evade import DualEvadeEnv, DualEvadeObservation, DualEvadePov
+from .dual_evade import DualEvadeEnv, DualEvadeObservation
 
 register(
     id='CellworldBotEvade-v0',
