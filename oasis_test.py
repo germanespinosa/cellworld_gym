@@ -1,3 +1,4 @@
+import time
 import cellworld_gym
 import gymnasium as gym
 
@@ -13,8 +14,14 @@ if __name__ == "__main__":
                    render=True,
                    real_time=True)
     env.reset()
+    start_time = time.time()
+    step_count = 0
     for i in range(100):
         action = env.action_space.sample()
         for j in range(10):
             env.step(action=action)
-    print("yes")
+            step_count += 1
+
+    total_time = time.time() - start_time
+
+    print("steps per second: {:.2f}".format(step_count / total_time))

@@ -122,7 +122,7 @@ class OasisEnv(Env):
     def step(self, action: int):
         self.set_action(action=action)
         model_t = self.model.time + self.time_step
-        while self.model.time < model_t:
+        while self.model.running and self.model.time < model_t:
             self.model.step()
         return self.__step__()
 
