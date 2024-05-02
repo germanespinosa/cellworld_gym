@@ -52,7 +52,7 @@ class DualEvadeEnv(Env):
 
         self.action_space = spaces.Discrete(len(self.action_list))
 
-        self.model = cwgame.DualEvade(world_name="21_05",
+        self.model = cwgame.DualEvade(world_name=world_name,
                                       real_time=real_time,
                                       render=render,
                                       use_predator=use_predator)

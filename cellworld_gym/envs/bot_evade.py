@@ -48,7 +48,7 @@ class BotEvadeEnv(Env):
 
         self.action_space = spaces.Discrete(len(self.action_list))
 
-        self.model = cwgame.BotEvade(world_name="21_05",
+        self.model = cwgame.BotEvade(world_name=world_name,
                                      real_time=real_time,
                                      render=render,
                                      use_predator=use_predator)
