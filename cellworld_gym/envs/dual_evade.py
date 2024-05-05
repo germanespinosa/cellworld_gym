@@ -105,6 +105,7 @@ class DualEvadeEnv(Env):
         self.other.set_destination(self.action_list[other_action])
 
     def __step__(self):
+        self.step_count += 1
         truncated = (self.step_count >= self.max_step)
 
         obs = self.__update_observation__(observation=self.observation,
@@ -133,7 +134,6 @@ class DualEvadeEnv(Env):
                 info["agents"][agent_name] = agent.get_stats()
         else:
             info = {}
-        self.step_count += 1
         return obs, reward, not self.model.running, truncated, info
 
     def replay_step(self, agents_state: typing.Dict[str, AgentState]):
