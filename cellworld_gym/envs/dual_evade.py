@@ -14,6 +14,20 @@ class DualEvadeObservation(Observation):
     fields = ["self_x",
               "self_y",
               "self_direction",
+              "predator_x",
+              "predator_y",
+              "predator_direction",
+              "prey_goal_distance",
+              "predator_prey_distance",
+              "puffed",
+              "puff_cooled_down",
+              "finished"]
+
+
+class DualEvadeObservationWithOther(DualEvadeObservation):
+    fields = ["self_x",
+              "self_y",
+              "self_direction",
               "other_x",
               "other_y",
               "other_direction",
@@ -28,6 +42,7 @@ class DualEvadeObservation(Observation):
 
 
 class DualEvadeEnv(Env):
+
     def __init__(self,
                  world_name: str,
                  use_lppos: bool,
@@ -37,12 +52,19 @@ class DualEvadeEnv(Env):
                  time_step: float = .25,
                  render: bool = False,
                  real_time: bool = False,
-                 end_on_pov_goal: bool = True):
+                 end_on_pov_goal: bool = True,
+                 use_other: bool = True):
         self.max_step = max_step
         self.reward_function = reward_function
         self.time_step = time_step
         self.loader = cwgame.CellWorldLoader(world_name=world_name)
-        self.observation = DualEvadeObservation()
+        self.use_other = use_other
+        if use_other:
+            self.observation = DualEvadeObservationWithOther()
+            self.other_observation = DualEvadeObservationWithOther()
+        else:
+            self.other_observation = DualEvadeObservation()
+            self.observation = DualEvadeObservation()
         self.observation_space = spaces.Box(-np.inf, np.inf, (len(self.observation),), dtype=np.float32)
         self.end_on_pov_goal = end_on_pov_goal
         if use_lppos:
@@ -60,7 +82,6 @@ class DualEvadeEnv(Env):
         self.predator_trajectory_length = 0
         self.episode_reward = 0
         self.step_count = 0
-        self.other_observation = DualEvadeObservation()
         self.prey = self.model.prey_1
         self.other = self.model.prey_2
         self.prey_data = self.model.prey_data_1
@@ -75,14 +96,15 @@ class DualEvadeEnv(Env):
         observation.self_y = prey.state.location[1]
         observation.self_direction = math.radians(prey.state.direction)
 
-        if self.model.mouse_visible:
-            observation.other_x = other.state.location[0]
-            observation.other_y = other.state.location[1]
-            observation.other_direction = math.radians(other.state.direction)
-        else:
-            observation.other_x = 0
-            observation.other_y = 0
-            observation.other_direction = 0
+        if self.use_other:
+            if self.model.mouse_visible:
+                observation.other_x = other.state.location[0]
+                observation.other_y = other.state.location[1]
+                observation.other_direction = math.radians(other.state.direction)
+            else:
+                observation.other_x = 0
+                observation.other_y = 0
+                observation.other_direction = 0
 
         if self.model.use_predator and prey_data.predator_visible:
             observation.predator_x = self.model.predator.state.location[0]
