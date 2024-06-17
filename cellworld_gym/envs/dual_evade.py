@@ -4,7 +4,7 @@ import cellworld_game as cwgame
 import numpy as np
 import math
 
-from ..core import Observation
+from ..core import Observation, Environment
 from cellworld_game import AgentState
 from gymnasium import Env
 from gymnasium import spaces
@@ -41,7 +41,7 @@ class DualEvadeObservationWithOther(DualEvadeObservation):
               "finished"]
 
 
-class DualEvadeEnv(Env):
+class DualEvadeEnv(Environment):
 
     def __init__(self,
                  world_name: str,
@@ -87,6 +87,7 @@ class DualEvadeEnv(Env):
         self.prey_data = self.model.prey_data_1
         self.other_data = self.model.prey_data_2
         self.other_policy = lambda x: random.randint(0, len(self.action_list) - 1)
+        Environment.__init__(self)
 
     def set_other_policy(self, other_policy: typing.Callable[[DualEvadeObservation], int]):
         self.other_policy = other_policy
@@ -151,9 +152,6 @@ class DualEvadeEnv(Env):
                     "is_success": survived,
                     "survived": survived,
                     "agents": {}}
-            for agent_name, agent in self.model.agents.items():
-                info["agents"][agent_name] = {}
-                info["agents"][agent_name] = agent.get_stats()
         else:
             info = {}
         return obs, reward, not self.model.running, truncated, info
@@ -174,6 +172,7 @@ class DualEvadeEnv(Env):
         model_t = self.model.time + self.time_step
         while self.model.running and self.model.time < model_t:
             self.model.step()
+        Environment.step(self, action=action)
         return self.__step__()
 
     def __reset__(self):
@@ -188,6 +187,7 @@ class DualEvadeEnv(Env):
               options={},
               seed=None):
         self.model.reset()
+        Environment.reset(self, options=options, seed=seed)
         return self.__reset__()
 
     def replay_reset(self, agents_state: typing.Dict[str, AgentState]):

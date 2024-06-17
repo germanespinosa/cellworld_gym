@@ -1,10 +1,9 @@
-import pulsekit
 import typing
 import cellworld_game as cwgame
 import numpy as np
 import math
 
-from ..core import Observation
+from ..core import Observation, Environment
 from cellworld_game import AgentState
 from gymnasium import Env
 from gymnasium import spaces
@@ -24,7 +23,7 @@ class BotEvadeObservation(Observation):
               "finished"]
 
 
-class BotEvadeEnv(Env):
+class BotEvadeEnv(Environment):
     def __init__(self,
                  world_name: str,
                  use_lppos: bool,
@@ -56,54 +55,50 @@ class BotEvadeEnv(Env):
         self.predator_trajectory_length = 0
         self.episode_reward = 0
         self.step_count = 0
+        Environment.__init__(self)
 
     def __update_observation__(self):
-        with pulsekit.CodeBlock("botevadeenv.__update_observation__"):
-            self.observation.prey_x = self.model.prey.state.location[0]
-            self.observation.prey_y = self.model.prey.state.location[1]
-            self.observation.prey_direction = math.radians(self.model.prey.state.direction)
+        self.observation.prey_x = self.model.prey.state.location[0]
+        self.observation.prey_y = self.model.prey.state.location[1]
+        self.observation.prey_direction = math.radians(self.model.prey.state.direction)
 
-            if self.model.use_predator and self.model.predator_visible:
-                self.observation.predator_x = self.model.predator.state.location[0]
-                self.observation.predator_y = self.model.predator.state.location[1]
-                self.observation.predator_direction = math.radians(self.model.predator.state.direction)
-            else:
-                self.observation.predator_x = 0
-                self.observation.predator_y = 0
-                self.observation.predator_direction = 0
+        if self.model.use_predator and self.model.predator_visible:
+            self.observation.predator_x = self.model.predator.state.location[0]
+            self.observation.predator_y = self.model.predator.state.location[1]
+            self.observation.predator_direction = math.radians(self.model.predator.state.direction)
+        else:
+            self.observation.predator_x = 0
+            self.observation.predator_y = 0
+            self.observation.predator_direction = 0
 
-            self.observation.prey_goal_distance = self.model.prey_goal_distance
-            self.observation.predator_prey_distance = self.model.predator_prey_distance
-            self.observation.puffed = self.model.puffed
-            self.observation.puff_cooled_down = self.model.puff_cool_down
-            self.observation.finished = not self.model.running
+        self.observation.prey_goal_distance = self.model.prey_goal_distance
+        self.observation.predator_prey_distance = self.model.predator_prey_distance
+        self.observation.puffed = self.model.puffed
+        self.observation.puff_cooled_down = self.model.puff_cool_down
+        self.observation.finished = not self.model.running
         return self.observation
 
     def set_action(self, action: int):
         self.model.prey.set_destination(self.action_list[action])
 
     def __step__(self):
-        with pulsekit.CodeBlock("botevadeenv.__step__"):
-            self.step_count += 1
-            truncated = (self.step_count >= self.max_step)
-            obs = self.__update_observation__()
-            reward = self.reward_function(obs)
-            self.episode_reward += reward
+        self.step_count += 1
+        truncated = (self.step_count >= self.max_step)
+        obs = self.__update_observation__()
+        reward = self.reward_function(obs)
+        self.episode_reward += reward
 
-            if self.model.puffed:
-                self.model.puffed = False
-            if not self.model.running or truncated:
-                survived = 1 if not self.model.running and self.model.puff_count == 0 else 0
-                info = {"captures": self.model.puff_count,
-                        "reward": self.episode_reward,
-                        "is_success": survived,
-                        "survived": survived,
-                        "agents": {}}
-                for agent_name, agent in self.model.agents.items():
-                    info["agents"][agent_name] = {}
-                    info["agents"][agent_name] = agent.get_stats()
-            else:
-                info = {}
+        if self.model.puffed:
+            self.model.puffed = False
+        if not self.model.running or truncated:
+            survived = 1 if not self.model.running and self.model.puff_count == 0 else 0
+            info = {"captures": self.model.puff_count,
+                    "reward": self.episode_reward,
+                    "is_success": survived,
+                    "survived": survived,
+                    "agents": {}}
+        else:
+            info = {}
         return obs, reward, not self.model.running, truncated, info
 
     def replay_step(self, agents_state: typing.Dict[str, AgentState]):
@@ -112,14 +107,12 @@ class BotEvadeEnv(Env):
         return self.__step__()
 
     def step(self, action: int):
-        with pulsekit.CodeBlock("botevadeenv.step"):
-            with pulsekit.CodeBlock("set_action"):
-                self.set_action(action=action)
-            model_t = self.model.time + self.time_step
-            with pulsekit.CodeBlock("model_steps"):
-                while self.model.running and self.model.time < model_t:
-                    self.model.step()
-            return self.__step__()
+        self.set_action(action=action)
+        model_t = self.model.time + self.time_step
+        while self.model.running and self.model.time < model_t:
+            self.model.step()
+        Environment.step(self, action=action)
+        return self.__step__()
 
     def __reset__(self):
         self.episode_reward = 0
@@ -127,9 +120,10 @@ class BotEvadeEnv(Env):
         return self.__update_observation__(), {}
 
     def reset(self,
-              options={},
+              options: typing.Optional[dict] = None,
               seed=None):
         self.model.reset()
+        Environment.reset(self, options=options, seed=seed)
         return self.__reset__()
 
     def replay_reset(self, agents_state: typing.Dict[str, AgentState]):
@@ -140,3 +134,4 @@ class BotEvadeEnv(Env):
     def close(self):
         self.model.close()
         Env.close(self=self)
+

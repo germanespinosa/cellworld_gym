@@ -1,7 +1,7 @@
 {
     "major": 0,
     "minor": 0,
-    "build": 97,
+    "build": 116,
     "source_folder": "cellworld_gym",
     "module_name": "cellworld_gym",
     "package_name": "cellworld_gym",
@@ -10,6 +10,7 @@
     "description": "OpenAI gym environments for cellworld experimental setup",
     "install_requires": [
         "cellworld_game",
+        "cellworld_belief",
         "gym"
     ],
     "license_type": "MIT",

@@ -3,7 +3,7 @@ import cellworld_game as cwgame
 import numpy as np
 import math
 
-from ..core import Observation
+from ..core import Observation, Environment
 from cellworld_game import AgentState
 from gymnasium import Env
 from gymnasium import spaces
@@ -25,7 +25,7 @@ class OasisObservation(Observation):
               "goal_time_left"]
 
 
-class OasisEnv(Env):
+class OasisEnv(Environment):
     def __init__(self,
                  world_name: str,
                  goal_locations: typing.List[typing.Tuple[float, float]],
@@ -61,6 +61,7 @@ class OasisEnv(Env):
         self.predator_trajectory_length = 0
         self.episode_reward = 0
         self.step_count = 0
+        Environment.__init__(self)
 
     def __update_observation__(self):
         self.observation.prey_x = self.model.prey.state.location[0]
@@ -107,9 +108,6 @@ class OasisEnv(Env):
                     "is_success": survived,
                     "survived": survived,
                     "agents": {}}
-            for agent_name, agent in self.model.agents.items():
-                info["agents"][agent_name] = {}
-                info["agents"][agent_name] = agent.get_stats()
         else:
             info = {}
         return obs, reward, not self.model.running, truncated, info
@@ -124,6 +122,7 @@ class OasisEnv(Env):
         model_t = self.model.time + self.time_step
         while self.model.running and self.model.time < model_t:
             self.model.step()
+        Environment.step(self, action=action)
         return self.__step__()
 
     def __reset__(self):
@@ -135,6 +134,7 @@ class OasisEnv(Env):
               options={},
               seed=None):
         self.model.reset()
+        Environment.reset(self, options=options, seed=seed)
         return self.__reset__()
 
     def replay_reset(self, agents_state: typing.Dict[str, AgentState]):
@@ -145,3 +145,4 @@ class OasisEnv(Env):
     def close(self):
         self.model.close()
         Env.close(self=self)
+

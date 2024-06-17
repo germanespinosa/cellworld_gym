@@ -1,6 +1,7 @@
 import typing
 import numpy as np
 from enum import Enum
+from gymnasium import Env
 
 
 class Observation(np.ndarray):
@@ -63,3 +64,28 @@ class Reward(object):
                 multiplier = multiplier[0]
             reward += offset + multiplier * observation[observation.field_enum[field].value]
         return reward
+
+
+class Environment(Env):
+    def __init__(self):
+        self.event_handlers: typing.Dict[str, typing.List[typing.Callable]] = {"reset": [],
+                                                                               "step": []}
+
+    def __handle_event__(self, event_name: str, *args):
+        for handler in self.event_handlers[event_name]:
+            handler(*args)
+
+    def add_event_handler(self, event_name: str, handler: typing.Callable):
+        if event_name not in self.event_handlers:
+            raise "Event handler not registered"
+        self.event_handlers[event_name].append(handler)
+
+    def reset(self,
+              options: typing.Optional[dict] = None,
+              seed=None):
+        self.__handle_event__("reset", options, seed)
+
+    def step(self, action: int):
+        self.__handle_event__("step", action)
+
+
