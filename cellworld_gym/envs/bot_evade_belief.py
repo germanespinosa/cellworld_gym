@@ -13,14 +13,15 @@ class BotEvadeBeliefEnv(Environment):
                  use_lppos: bool,
                  use_predator: bool,
                  max_step: int = 300,
-                 reward_function: typing.Callable[[cwgame.Model], float] = lambda x: 0,
+                 reward_function: typing.Callable[[belief.BeliefState, cwgame.BotEvade], float] = lambda x: 0,
                  time_step: float = .25,
                  render: bool = False,
                  real_time: bool = False,
                  belief_state_components: typing.List[belief.BeliefStateComponent] = None,
                  belief_state_definition: int = 100,
                  belief_state_probability: float = 1.0):
-
+        if belief_state_components is None:
+            belief_state_components = []
         self.max_step = max_step
         self.reward_function = reward_function
         self.time_step = time_step
@@ -79,7 +80,7 @@ class BotEvadeBeliefEnv(Environment):
         else:
             info = {}
         self.belief_state.tick()
-        return self.belief_state.probability_distribution, reward, not self.model.running, truncated, info
+        return self.belief_state.probability_distribution.cpu().numpy(), reward, not self.model.running, truncated, info
 
     def reset(self,
               options: typing.Optional[dict] = None,
@@ -88,7 +89,7 @@ class BotEvadeBeliefEnv(Environment):
         self.model.reset()
         self.episode_reward = 0
         self.step_count = 0
-        return self.belief_state.probability_distribution, {}
+        return self.belief_state.probability_distribution.cpu().numpy(), {}
 
     def close(self):
         self.model.close()
