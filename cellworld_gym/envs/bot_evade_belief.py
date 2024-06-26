@@ -82,12 +82,13 @@ class BotEvadeBeliefEnv(Environment):
         else:
             info = {}
         self.belief_state.tick()
-        return self.belief_state.probability_distribution.cpu().numpy(), reward, not self.model.running, truncated, info
+        return self.get_observation(), reward, not self.model.running, truncated, info
 
     def get_observation(self):
         probability_matrix = self.belief_state.probability_distribution.cpu().numpy()
-        i, j, _, _, _, _ = self.belief_state.get_location_indices(self.model.predator.state.location)
+        i, j, _, _, _, _ = self.belief_state.get_location_indices(self.model.prey.state.location)
         probability_matrix[i, j] = -1
+        return probability_matrix
 
     def reset(self,
               options: typing.Optional[dict] = None,
@@ -97,7 +98,7 @@ class BotEvadeBeliefEnv(Environment):
         self.episode_reward = 0
         self.step_count = 0
         self.prev_agents_state = self.model.get_agents_state()
-        return self.belief_state.probability_distribution.cpu().numpy(), {}
+        return self.get_observation(), {}
 
     def close(self):
         self.model.close()
