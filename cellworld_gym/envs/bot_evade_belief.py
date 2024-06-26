@@ -13,7 +13,7 @@ class BotEvadeBeliefEnv(Environment):
                  use_lppos: bool,
                  use_predator: bool,
                  max_step: int = 300,
-                 reward_function: typing.Callable[[belief.BeliefState, cwgame.BotEvade], float] = lambda x: 0,
+                 reward_function: typing.Callable[[typing.Dict[str, cwgame.AgentState], cwgame.BotEvade, belief.BeliefState], float] = lambda x, y, z: 0,
                  time_step: float = .25,
                  render: bool = False,
                  real_time: bool = False,
@@ -45,13 +45,14 @@ class BotEvadeBeliefEnv(Environment):
                                                probability=belief_state_probability)
 
         self.observation = self.belief_state.probability_distribution
-        self.observation_space = spaces.Box(0, 1, self.belief_state.shape, dtype=np.float32)
+        self.observation_space = spaces.Box(-1, 1, self.belief_state.shape, dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.action_list))
 
         self.prey_trajectory_length = 0
         self.predator_trajectory_length = 0
         self.episode_reward = 0
         self.step_count = 0
+        self.prev_agents_state: typing.Dict[str, cwgame.AgentState] = {}
         Environment.__init__(self)
 
     def set_action(self, action: int):
@@ -65,7 +66,8 @@ class BotEvadeBeliefEnv(Environment):
         Environment.step(self, action=action)
         self.step_count += 1
         truncated = (self.step_count >= self.max_step)
-        reward = self.reward_function(self.model)
+        reward = self.reward_function(self.prev_agents_state, self.model, self.belief_state)
+        self.prev_agents_state = self.model.get_agents_state()
         self.episode_reward += reward
 
         if self.model.puffed:
@@ -82,6 +84,11 @@ class BotEvadeBeliefEnv(Environment):
         self.belief_state.tick()
         return self.belief_state.probability_distribution.cpu().numpy(), reward, not self.model.running, truncated, info
 
+    def get_observation(self):
+        probability_matrix = self.belief_state.probability_distribution.cpu().numpy()
+        i, j, _, _, _, _ = self.belief_state.get_location_indices(self.model.predator.state.location)
+        probability_matrix[i, j] = -1
+
     def reset(self,
               options: typing.Optional[dict] = None,
               seed=None):
@@ -89,6 +96,7 @@ class BotEvadeBeliefEnv(Environment):
         self.model.reset()
         self.episode_reward = 0
         self.step_count = 0
+        self.prev_agents_state = self.model.get_agents_state()
         return self.belief_state.probability_distribution.cpu().numpy(), {}
 
     def close(self):
