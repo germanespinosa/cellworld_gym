@@ -62,7 +62,7 @@ class BotEvadeEnv(Environment):
         self.observation.prey_y = self.model.prey.state.location[1]
         self.observation.prey_direction = math.radians(self.model.prey.state.direction)
 
-        if self.model.use_predator and self.model.predator_visible:
+        if self.model.use_predator and self.model.prey_data.predator_visible:
             self.observation.predator_x = self.model.predator.state.location[0]
             self.observation.predator_y = self.model.predator.state.location[1]
             self.observation.predator_direction = math.radians(self.model.predator.state.direction)
@@ -71,9 +71,9 @@ class BotEvadeEnv(Environment):
             self.observation.predator_y = 0
             self.observation.predator_direction = 0
 
-        self.observation.prey_goal_distance = self.model.prey_goal_distance
-        self.observation.predator_prey_distance = self.model.predator_prey_distance
-        self.observation.puffed = self.model.puffed
+        self.observation.prey_goal_distance = self.model.prey_data.prey_goal_distance
+        self.observation.predator_prey_distance = self.model.prey_data.predator_prey_distance
+        self.observation.puffed = self.model.prey_data.puffed
         self.observation.puff_cooled_down = self.model.puff_cool_down
         self.observation.finished = not self.model.running
         return self.observation
@@ -88,11 +88,11 @@ class BotEvadeEnv(Environment):
         reward = self.reward_function(obs)
         self.episode_reward += reward
 
-        if self.model.puffed:
-            self.model.puffed = False
+        if self.model.prey_data.puffed:
+            self.model.prey_data.puffed = False
         if not self.model.running or truncated:
-            survived = 1 if not self.model.running and self.model.puff_count == 0 else 0
-            info = {"captures": self.model.puff_count,
+            survived = 1 if not self.model.running and self.model.prey_data.puff_count == 0 else 0
+            info = {"captures": self.model.prey_data.puff_count,
                     "reward": self.episode_reward,
                     "is_success": survived,
                     "survived": survived,

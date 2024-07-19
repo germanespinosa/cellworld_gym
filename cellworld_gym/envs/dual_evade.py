@@ -14,20 +14,6 @@ class DualEvadeObservation(Observation):
     fields = ["self_x",
               "self_y",
               "self_direction",
-              "predator_x",
-              "predator_y",
-              "predator_direction",
-              "prey_goal_distance",
-              "predator_prey_distance",
-              "puffed",
-              "puff_cooled_down",
-              "finished"]
-
-
-class DualEvadeObservationWithOther(DualEvadeObservation):
-    fields = ["self_x",
-              "self_y",
-              "self_direction",
               "other_x",
               "other_y",
               "other_direction",
@@ -59,14 +45,31 @@ class DualEvadeEnv(Environment):
         self.time_step = time_step
         self.loader = cwgame.CellWorldLoader(world_name=world_name)
         self.use_other = use_other
-        if use_other:
-            self.observation = DualEvadeObservationWithOther()
-            self.other_observation = DualEvadeObservationWithOther()
+        if self.use_other:
+            self.other_policy = lambda x: random.randint(0, len(self.action_list) - 1)
+            self.model = cwgame.DualEvade(world_name=world_name,
+                                          real_time=real_time,
+                                          render=render,
+                                          use_predator=use_predator)
+            self.prey = self.model.prey_1
+            self.other = self.model.prey_2
+            self.prey_data = self.model.prey_data_1
+            self.other_data = self.model.prey_data_2
+            self.end_on_pov_goal = end_on_pov_goal
         else:
-            self.other_observation = DualEvadeObservation()
-            self.observation = DualEvadeObservation()
+            self.other_policy = None
+            self.model = cwgame.BotEvade(world_name=world_name,
+                                         real_time=real_time,
+                                         render=render,
+                                         use_predator=use_predator)
+            self.prey = self.model.prey
+            self.other = None
+            self.prey_data = self.model.prey_data
+            self.other_data = None
+            self.end_on_pov_goal = True
+        self.other_observation = DualEvadeObservation()
+        self.observation = DualEvadeObservation()
         self.observation_space = spaces.Box(-np.inf, np.inf, (len(self.observation),), dtype=np.float32)
-        self.end_on_pov_goal = end_on_pov_goal
         if use_lppos:
             self.action_list = self.loader.tlppo_action_list
         else:
@@ -74,19 +77,10 @@ class DualEvadeEnv(Environment):
 
         self.action_space = spaces.Discrete(len(self.action_list))
 
-        self.model = cwgame.DualEvade(world_name=world_name,
-                                      real_time=real_time,
-                                      render=render,
-                                      use_predator=use_predator)
         self.prey_trajectory_length = 0
         self.predator_trajectory_length = 0
         self.episode_reward = 0
         self.step_count = 0
-        self.prey = self.model.prey_1
-        self.other = self.model.prey_2
-        self.prey_data = self.model.prey_data_1
-        self.other_data = self.model.prey_data_2
-        self.other_policy = lambda x: random.randint(0, len(self.action_list) - 1)
         Environment.__init__(self)
 
     def set_other_policy(self, other_policy: typing.Callable[[DualEvadeObservation], int]):
@@ -106,6 +100,10 @@ class DualEvadeEnv(Environment):
                 observation.other_x = 0
                 observation.other_y = 0
                 observation.other_direction = 0
+        else:
+            observation.other_x = 0
+            observation.other_y = 0
+            observation.other_direction = 0
 
         if self.model.use_predator and prey_data.predator_visible:
             observation.predator_x = self.model.predator.state.location[0]
@@ -123,9 +121,10 @@ class DualEvadeEnv(Environment):
         observation.finished = not self.model.running
         return observation
 
-    def set_actions(self, action: int, other_action: int):
+    def set_actions(self, action: int, other_action: int = None):
         self.prey.set_destination(self.action_list[action])
-        self.other.set_destination(self.action_list[other_action])
+        if other_action is not None:
+            self.other.set_destination(self.action_list[other_action])
 
     def __step__(self):
         self.step_count += 1
@@ -162,13 +161,17 @@ class DualEvadeEnv(Environment):
         return self.__step__()
 
     def step(self, action: int):
-        other_obs = self.__update_observation__(observation=self.other_observation,
-                                                prey=self.other,
-                                                prey_data=self.other_data,
-                                                other=self.prey)
-        other_action = self.other_policy(other_obs)
-        self.set_actions(action=action,
-                         other_action=other_action)
+        if self.use_other:
+            other_obs = self.__update_observation__(observation=self.other_observation,
+                                                    prey=self.other,
+                                                    prey_data=self.other_data,
+                                                    other=self.prey)
+            other_action = self.other_policy(other_obs)
+            self.set_actions(action=action,
+                             other_action=other_action)
+        else:
+            self.set_actions(action=action)
+
         model_t = self.model.time + self.time_step
         while self.model.running and self.model.time < model_t:
             self.model.step()
