@@ -1,10 +1,9 @@
+import enum
 import typing
 import cellworld_game as cwgame
 import numpy as np
 import math
-
 from ..core import Observation, Environment
-from cellworld_game import AgentState
 from gymnasium import Env
 from gymnasium import spaces
 
@@ -24,6 +23,21 @@ class BotEvadeObservation(Observation):
 
 
 class BotEvadeEnv(Environment):
+
+    class PointOfView(cwgame.BotEvade.PointOfView):
+        pass
+
+    class AgentRenderMode(cwgame.Agent.RenderMode):
+        pass
+
+    class ObservationType(enum.Enum):
+        DATA = 0
+        PIXELS = 1
+
+    class ActionType(enum.Enum):
+        DISCRETE = 0
+        CONTINUOUS = 1
+
     def __init__(self,
                  world_name: str,
                  use_lppos: bool,
@@ -32,25 +46,43 @@ class BotEvadeEnv(Environment):
                  reward_function: typing.Callable[[BotEvadeObservation], float] = lambda x: 0,
                  time_step: float = .25,
                  render: bool = False,
-                 real_time: bool = False):
+                 real_time: bool = False,
+                 point_of_view: PointOfView = PointOfView.TOP,
+                 agent_render_mode=AgentRenderMode.SPRITE,
+                 observation_type=ObservationType.DATA,
+                 action_type=ActionType.DISCRETE):
 
+        if observation_type == BotEvadeEnv.ObservationType.PIXELS and not render:
+            raise ValueError("Cannot use PIXELS observation type without render")
         self.max_step = max_step
         self.reward_function = reward_function
         self.time_step = time_step
         self.loader = cwgame.CellWorldLoader(world_name=world_name)
-        self.observation = BotEvadeObservation()
-        self.observation_space = spaces.Box(-np.inf, np.inf, (len(self.observation),), dtype=np.float32)
+
         if use_lppos:
             self.action_list = self.loader.tlppo_action_list
         else:
             self.action_list = self.loader.full_action_list
 
-        self.action_space = spaces.Discrete(len(self.action_list))
+        self.action_type = action_type
+        if self.action_type == BotEvadeEnv.ActionType.DISCRETE:
+            self.action_space = spaces.Discrete(len(self.action_list))
+        else:
+            self.action_space = spaces.Box(0, 1, (2,), dtype=np.float32)
 
         self.model = cwgame.BotEvade(world_name=world_name,
                                      real_time=real_time,
                                      render=render,
-                                     use_predator=use_predator)
+                                     use_predator=use_predator,
+                                     point_of_view=point_of_view,
+                                     agent_render_mode=agent_render_mode)
+        self.observation_type = observation_type
+        if self.observation_type == BotEvadeEnv.ObservationType.PIXELS:
+            self.observation = BotEvadeObservation()
+            self.observation_space = spaces.Box(-np.inf, np.inf, self.observation.shape, dtype=np.float32)
+        else:
+            self.observation = self.model.view.get_screen(normalized=True)
+            self.observation_space = spaces.Box(0.0, 1.0, self.observation.shape, dtype=np.float32)
         self.prey_trajectory_length = 0
         self.predator_trajectory_length = 0
         self.episode_reward = 0
@@ -58,28 +90,34 @@ class BotEvadeEnv(Environment):
         Environment.__init__(self)
 
     def __update_observation__(self):
-        self.observation.prey_x = self.model.prey.state.location[0]
-        self.observation.prey_y = self.model.prey.state.location[1]
-        self.observation.prey_direction = math.radians(self.model.prey.state.direction)
+        if self.observation_type == BotEvadeEnv.ObservationType.DATA:
+            self.observation.prey_x = self.model.prey.state.location[0]
+            self.observation.prey_y = self.model.prey.state.location[1]
+            self.observation.prey_direction = math.radians(self.model.prey.state.direction)
 
-        if self.model.use_predator and self.model.prey_data.predator_visible:
-            self.observation.predator_x = self.model.predator.state.location[0]
-            self.observation.predator_y = self.model.predator.state.location[1]
-            self.observation.predator_direction = math.radians(self.model.predator.state.direction)
+            if self.model.use_predator and self.model.prey_data.predator_visible:
+                self.observation.predator_x = self.model.predator.state.location[0]
+                self.observation.predator_y = self.model.predator.state.location[1]
+                self.observation.predator_direction = math.radians(self.model.predator.state.direction)
+            else:
+                self.observation.predator_x = 0
+                self.observation.predator_y = 0
+                self.observation.predator_direction = 0
+
+            self.observation.prey_goal_distance = self.model.prey_data.prey_goal_distance
+            self.observation.predator_prey_distance = self.model.prey_data.predator_prey_distance
+            self.observation.puffed = self.model.prey_data.puffed
+            self.observation.puff_cooled_down = self.model.puff_cool_down
+            self.observation.finished = not self.model.running
         else:
-            self.observation.predator_x = 0
-            self.observation.predator_y = 0
-            self.observation.predator_direction = 0
-
-        self.observation.prey_goal_distance = self.model.prey_data.prey_goal_distance
-        self.observation.predator_prey_distance = self.model.prey_data.predator_prey_distance
-        self.observation.puffed = self.model.prey_data.puffed
-        self.observation.puff_cooled_down = self.model.puff_cool_down
-        self.observation.finished = not self.model.running
+            self.observation = self.model.view.get_screen()
         return self.observation
 
-    def set_action(self, action: int):
-        self.model.prey.set_destination(self.action_list[action])
+    def set_action(self, action: typing.Union[int, typing.Tuple[float, float]]):
+        if self.action_type == BotEvadeEnv.ActionType.DISCRETE:
+            self.model.prey.set_destination(self.action_list[action])
+        else:
+            self.model.prey.set_destination(action)
 
     def __step__(self):
         self.step_count += 1
@@ -101,12 +139,12 @@ class BotEvadeEnv(Environment):
             info = {}
         return obs, reward, not self.model.running, truncated, info
 
-    def replay_step(self, agents_state: typing.Dict[str, AgentState]):
+    def replay_step(self, agents_state: typing.Dict[str, cwgame.AgentState]):
         self.model.set_agents_state(agents_state=agents_state,
                                     delta_t=self.time_step)
         return self.__step__()
 
-    def step(self, action: int):
+    def step(self, action: typing.Union[int, typing.Tuple[float, float]]):
         self.set_action(action=action)
         model_t = self.model.time + self.time_step
         while self.model.running and self.model.time < model_t:
@@ -126,7 +164,7 @@ class BotEvadeEnv(Environment):
         Environment.reset(self, options=options, seed=seed)
         return self.__reset__()
 
-    def replay_reset(self, agents_state: typing.Dict[str, AgentState]):
+    def replay_reset(self, agents_state: typing.Dict[str, cwgame.AgentState]):
         self.model.reset()
         self.model.set_agents_state(agents_state=agents_state)
         return self.__reset__()

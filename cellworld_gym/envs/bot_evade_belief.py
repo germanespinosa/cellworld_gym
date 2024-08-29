@@ -3,8 +3,10 @@ from ..core import Environment
 import cellworld_belief as belief
 import numpy as np
 import cellworld_game as cwgame
+import math
 from gymnasium import spaces
 from gymnasium import Env
+from .bot_evade import BotEvadeObservation
 
 
 class BotEvadeBeliefEnv(Environment):
@@ -13,7 +15,7 @@ class BotEvadeBeliefEnv(Environment):
                  use_lppos: bool,
                  use_predator: bool,
                  max_step: int = 300,
-                 reward_function: typing.Callable[[typing.Dict[str, cwgame.AgentState], cwgame.BotEvade, belief.BeliefState], float] = lambda x, y, z: 0,
+                 reward_function: typing.Callable[[BotEvadeObservation], float] = lambda x: 0,
                  time_step: float = .25,
                  render: bool = False,
                  real_time: bool = False,
@@ -44,7 +46,6 @@ class BotEvadeBeliefEnv(Environment):
                                                components=belief_state_components,
                                                probability=belief_state_probability)
 
-        self.observation = self.belief_state.probability_distribution
         self.observation_space = spaces.Box(-1, 1, self.belief_state.shape, dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.action_list))
 
@@ -54,6 +55,28 @@ class BotEvadeBeliefEnv(Environment):
         self.step_count = 0
         self.prev_agents_state: typing.Dict[str, cwgame.AgentState] = {}
         Environment.__init__(self)
+
+    def __get_observation__(self) -> BotEvadeObservation:
+        obs = BotEvadeObservation()
+        obs.prey_x = self.model.prey.state.location[0]
+        obs.prey_y = self.model.prey.state.location[1]
+        obs.prey_direction = math.radians(self.model.prey.state.direction)
+
+        if self.model.use_predator and self.model.predator_visible:
+            obs.predator_x = self.model.predator.state.location[0]
+            obs.predator_y = self.model.predator.state.location[1]
+            obs.predator_direction = math.radians(self.model.predator.state.direction)
+        else:
+            obs.predator_x = 0
+            obs.predator_y = 0
+            obs.predator_direction = 0
+
+        obs.prey_goal_distance = self.model.prey_goal_distance
+        obs.predator_prey_distance = self.model.predator_prey_distance
+        obs.puffed = self.model.puffed
+        obs.puff_cooled_down = self.model.puff_cool_down
+        obs.finished = not self.model.running
+        return obs
 
     def set_action(self, action: int):
         self.model.prey.set_destination(self.action_list[action])
@@ -66,7 +89,7 @@ class BotEvadeBeliefEnv(Environment):
         Environment.step(self, action=action)
         self.step_count += 1
         truncated = (self.step_count >= self.max_step)
-        reward = self.reward_function(self.prev_agents_state, self.model, self.belief_state)
+        reward = self.reward_function(self.__get_observation__())
         self.prev_agents_state = self.model.get_agents_state()
         self.episode_reward += reward
 
