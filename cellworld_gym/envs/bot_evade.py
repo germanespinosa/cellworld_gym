@@ -24,11 +24,9 @@ class BotEvadeObservation(Observation):
 
 class BotEvadeEnv(Environment):
 
-    class PointOfView(cwgame.BotEvade.PointOfView):
-        pass
+    PointOfView = cwgame.BotEvade.PointOfView
 
-    class AgentRenderMode(cwgame.Agent.RenderMode):
-        pass
+    AgentRenderMode = cwgame.Agent.RenderMode
 
     class ObservationType(enum.Enum):
         DATA = 0
@@ -68,7 +66,7 @@ class BotEvadeEnv(Environment):
         if self.action_type == BotEvadeEnv.ActionType.DISCRETE:
             self.action_space = spaces.Discrete(len(self.action_list))
         else:
-            self.action_space = spaces.Box(0, 1, (2,), dtype=np.float32)
+            self.action_space = spaces.Box(0.0, 1.0, (2,), dtype=np.float32)
 
         self.model = cwgame.BotEvade(world_name=world_name,
                                      real_time=real_time,
@@ -77,7 +75,7 @@ class BotEvadeEnv(Environment):
                                      point_of_view=point_of_view,
                                      agent_render_mode=agent_render_mode)
         self.observation_type = observation_type
-        if self.observation_type == BotEvadeEnv.ObservationType.PIXELS:
+        if self.observation_type == BotEvadeEnv.ObservationType.DATA:
             self.observation = BotEvadeObservation()
             self.observation_space = spaces.Box(-np.inf, np.inf, self.observation.shape, dtype=np.float32)
         else:
@@ -117,7 +115,7 @@ class BotEvadeEnv(Environment):
         if self.action_type == BotEvadeEnv.ActionType.DISCRETE:
             self.model.prey.set_destination(self.action_list[action])
         else:
-            self.model.prey.set_destination(action)
+            self.model.prey.set_destination(tuple(action))
 
     def __step__(self):
         self.step_count += 1
