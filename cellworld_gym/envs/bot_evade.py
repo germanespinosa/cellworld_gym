@@ -46,9 +46,13 @@ class BotEvadeEnv(Environment):
                  render: bool = False,
                  real_time: bool = False,
                  point_of_view: PointOfView = PointOfView.TOP,
-                 agent_render_mode=AgentRenderMode.SPRITE,
-                 observation_type=ObservationType.DATA,
-                 action_type=ActionType.DISCRETE):
+                 agent_render_mode: AgentRenderMode = AgentRenderMode.SPRITE,
+                 observation_type: ObservationType = ObservationType.DATA,
+                 action_type: ActionType = ActionType.DISCRETE,
+                 prey_max_forward_speed: float = 0.5,
+                 prey_max_turning_speed: float = 20.0,
+                 predator_prey_forward_speed_ratio: float = .15,
+                 predator_prey_turning_speed_ratio: float = .175):
 
         if observation_type == BotEvadeEnv.ObservationType.PIXELS and not render:
             raise ValueError("Cannot use PIXELS observation type without render")
@@ -73,7 +77,11 @@ class BotEvadeEnv(Environment):
                                      render=render,
                                      use_predator=use_predator,
                                      point_of_view=point_of_view,
-                                     agent_render_mode=agent_render_mode)
+                                     agent_render_mode=agent_render_mode,
+                                     prey_max_forward_speed=prey_max_forward_speed,
+                                     prey_max_turning_speed=prey_max_turning_speed,
+                                     predator_prey_forward_speed_ratio=predator_prey_forward_speed_ratio,
+                                     predator_prey_turning_speed_ratio=predator_prey_turning_speed_ratio)
         self.observation_type = observation_type
         if self.observation_type == BotEvadeEnv.ObservationType.DATA:
             self.observation = BotEvadeObservation()

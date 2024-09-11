@@ -12,7 +12,9 @@ if __name__ == "__main__":
                    use_predator=True,
                    reward_function=reward,
                    render=False,
-                   real_time=False)
+                   real_time=False,
+                   predator_prey_forward_speed_ratio=1.5,
+                   predator_prey_turning_speed_ratio=1.5)
     env.reset()
     start_time = time.time()
     step_count = 0

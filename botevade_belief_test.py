@@ -32,7 +32,11 @@ if __name__ == "__main__":
                                                     reward_function=reward,
                                                     render=True,
                                                     real_time=True,
-                                                    belief_state_components=components)
+                                                    belief_state_components=components,
+                                                    prey_max_forward_speed=.25,
+                                                    prey_max_turning_speed=2.0,
+                                                    predator_prey_forward_speed_ratio=1.0,
+                                                    predator_prey_turning_speed_ratio=1.0)
 
 
     def render(screen, coordinate_converter: game.CoordinateConverter):
